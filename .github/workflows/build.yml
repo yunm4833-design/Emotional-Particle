@@ -53,8 +53,11 @@ jobs:
           Expand-Archive pluginval.zip -DestinationPath pluginval
           $validator = Get-ChildItem pluginval -Filter pluginval.exe -Recurse | Select-Object -First 1
           if (-not $validator) { throw 'pluginval executable missing' }
-          & $validator.FullName --strictness-level 5 --validate "$env:GITHUB_WORKSPACE\build\EmotionalParticle_artefacts\Release\VST3\Emotional Particle.vst3" --output-dir "$env:GITHUB_WORKSPACE\validation"
-          if ($LASTEXITCODE -ne 0) { throw 'pluginval failed' }
+          $plugin = "$env:GITHUB_WORKSPACE\build\EmotionalParticle_artefacts\Release\VST3\Emotional Particle.vst3"
+          $logs = "$env:GITHUB_WORKSPACE\validation"
+          $arguments = "--strictness-level 5 --validate `"$plugin`" --output-dir `"$logs`""
+          $process = Start-Process -FilePath $validator.FullName -ArgumentList $arguments -Wait -PassThru -NoNewWindow
+          if ($process.ExitCode -ne 0) { throw "pluginval failed: $($process.ExitCode)" }
       - name: Package Windows ZIP
         if: runner.os == 'Windows'
         shell: pwsh

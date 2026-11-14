@@ -31,7 +31,7 @@ Windows：安装 Visual Studio 2022 的 C++ 桌面开发组件及 CMake，在 Po
 
 macOS：安装 Xcode 和命令行工具，运行 `./build-macos.sh`。生成 Universal VST3、AU 与独立程序。
 
-构建使用固定提交的 JUCE 7.0.12，脚本自动应用两个已记录的编译器兼容修补。不包含 Avid 的专有 SDK。AAX 操作详见 [docs/AAX.md](docs/AAX.md)。
+构建使用固定提交的 JUCE 7.0.12，脚本自动应用已记录的编译器兼容修补，以及 macOS SDK 原生窗口截图 API 兼容处理。不包含 Avid 的专有 SDK。AAX 操作详见 [docs/AAX.md](docs/AAX.md)。
 
 ## 稳定性状态
 

@@ -22,7 +22,7 @@ macOS: copy `.vst3` into `~/Library/Audio/Plug-Ins/VST3/` and `.component` into 
 
 ## Build
 
-CMake 3.22+, C++17. JUCE 7.0.12 is fetched at an exact commit; two legacy compiler compatibility changes are applied by `cmake/JuceCompatibility.cmake`. `-DJUCE_SOURCE_DIR=/path/to/JUCE` can use a local checkout of that version.
+CMake 3.22+, C++17. JUCE 7.0.12 is fetched at an exact commit; legacy compiler compatibility changes and a macOS SDK window-snapshot compatibility change are applied by `cmake/JuceCompatibility.cmake`. `-DJUCE_SOURCE_DIR=/path/to/JUCE` can use a local checkout of that version.
 
 Windows: run `./build-windows.ps1` with Visual Studio 2022's C++ desktop workload installed.
 

@@ -16,6 +16,9 @@ int main(){try{
  check(std::abs(restored.state.getRawParameterValue("drive")->load()-12)<.001,"Drive restore");
  auto* bypass=p.state.getParameter("bypass");bypass->setValueNotifyingHost(1);p.prepareToPlay(48000,64);juce::AudioBuffer<float> dry(2,64);for(int c=0;c<2;++c)for(int n=0;n<64;++n)dry.setSample(c,n,.25f);juce::MidiBuffer midi;p.processBlock(dry,midi);check(dry.getSample(0,63)==.25f,"Unity bypass");
  dry.setSample(0,0,std::numeric_limits<float>::quiet_NaN());dry.setSample(1,0,std::numeric_limits<float>::infinity());p.processBlock(dry,midi);check(std::isfinite(dry.getSample(0,0))&&std::isfinite(dry.getSample(1,0)),"Finite bypass input recovery");
+ bypass->setValueNotifyingHost(0);p.prepareToPlay(48000,64);
+ for(int block=0;block<32;++block){for(int c=0;c<2;++c)for(int n=0;n<64;++n)dry.setSample(c,n,.25f);p.processBlockBypassed(dry,midi);}
+ check(dry.getSample(0,63)==.25f&&dry.getSample(1,63)==.25f,"Host callback unity bypass");
  restored.setStateInformation("bad",3);check(restored.getCurrentProgram()==1,"Malformed state");
  std::cout<<"PASS: host mono/stereo, sample rates/block sizes, programs and state\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

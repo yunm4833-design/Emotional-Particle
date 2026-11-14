@@ -1,5 +1,5 @@
-# Two compatibility fixes already present in the 0.4 dependency, now reproducible.
-# No DSP or GUI implementation is patched; retain the upstream pinned revision.
+# Reproduce 0.4 compiler fixes, plus a Cocoa window-snapshot SDK compatibility fix.
+# Retain the upstream pinned revision; no audio algorithm is patched.
 set(header "${JUCE_SOURCE_DIR}/modules/juce_audio_basics/juce_audio_basics.h")
 file(READ "${header}" text)
 if(NOT text MATCHES "#include <type_traits>")
@@ -11,4 +11,19 @@ file(READ "${header}" text)
 string(REGEX REPLACE "    template <size_t numLayouts>\n    AudioPluginInstance \\(const short channelLayoutList\\[numLayouts\\]\\[2\\]\\) : AudioProcessor \\(channelLayoutList\\) \\{\\}\n" "" patched "${text}")
 if(NOT patched STREQUAL text)
  file(WRITE "${header}" "${patched}")
+endif()
+# JUCE 7's legacy window snapshot API was removed from macOS SDK 15.
+# Use Cocoa view caching instead; this does not change audio or component painting.
+set(header "${JUCE_SOURCE_DIR}/modules/juce_gui_basics/native/juce_Windowing_mac.mm")
+file(READ "${header}" text)
+if(NOT text MATCHES "EP Cocoa snapshot compatibility")
+ string(FIND "${text}" "static Image createNSWindowSnapshot (NSWindow* nsWindow)" first)
+ string(FIND "${text}" "Image createSnapshotOfNativeWindow (void* nativeWindowHandle)" last)
+ if(first LESS 0 OR last LESS first)
+  message(FATAL_ERROR "Unexpected JUCE native snapshot implementation; use pinned JUCE 7.0.12")
+ endif()
+ string(SUBSTRING "${text}" 0 ${first} before)
+ string(SUBSTRING "${text}" ${last} -1 after)
+ file(READ "${CMAKE_CURRENT_LIST_DIR}/CocoaWindowSnapshot.inc" replacement)
+ file(WRITE "${header}" "${before}${replacement}${after}")
 endif()
