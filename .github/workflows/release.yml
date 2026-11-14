@@ -50,8 +50,8 @@ jobs:
           printf '\nBuild commit: %s\nValidation: https://github.com/%s/actions/runs/%s\n' "$RELEASE_COMMIT" "$GH_REPO" "$VALIDATED_RUN" >> release-notes.md
           (cd release-assets/EmotionalParticle-Windows && sha256sum *.zip) > release-assets/SHA256SUMS.txt
           (cd release-assets/EmotionalParticle-macOS && sha256sum *.zip) >> release-assets/SHA256SUMS.txt
-          gh release create v0.5.0-rc1 --target "$RELEASE_COMMIT" --prerelease \
-            --title 'Emotional Particle 0.5 — Windows VST3 / macOS VST3 + AU (Preview)' \
-            --notes-file release-notes.md \
+          # Maintainer creates the release first; automation only uploads validated assets.
+          gh release view v0.5.0-rc1 > /dev/null
+          gh release upload v0.5.0-rc1 --clobber \
             release-assets/EmotionalParticle-Windows/*.zip \
             release-assets/EmotionalParticle-macOS/*.zip release-assets/SHA256SUMS.txt
