@@ -17,7 +17,7 @@ The newest dump in the supplied archive belongs to Live 12.4.16, 2026-11-14. Old
 | `0x1a103f`, `0x1a12ca` | `juce::Component::paintComponentAndChildren` |
 | `0x279243` | `juce::HWNDComponentPeer::performPaint` |
 
-The captured stack also contains Windows heap and CRT addresses. This is a **raw stack-address scan with nearest-symbol lookup**, not a fully symbolized/unwound Windows debugger backtrace. Some entries may be stale. It supports investigating the GUI allocation/paint path, but does not prove which instruction first corrupted memory, or prove that the audio thread is fault-free. The allocation failure is not a demonstrated program-notification recursion; those are separate findings.
+Disassembly confirms that `0x45a4b3` is the return address immediately after a `Graphics::strokePath` call in the rotary track drawing code. The captured stack also contains Windows heap and CRT addresses. This is a **raw stack-address scan with nearest-symbol lookup**, not a fully symbolized/unwound Windows debugger backtrace. Some entries may be stale. It supports investigating the GUI allocation/paint path, but does not prove which instruction first corrupted memory, or prove that the audio thread is fault-free. The allocation failure is not a demonstrated program-notification recursion; those are separate findings.
 
 The original archive contains personal project/configuration information and is deliberately not committed. No personal paths, serials, projects, or raw dumps are published.
 
