@@ -1,0 +1,83 @@
+cmake_minimum_required(VERSION 3.22)
+project(EmotionalParticle VERSION 0.5.0 LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(CTest)
+option(EP_ENABLE_AAX "Build AAX using a separately licensed Avid SDK" OFF)
+option(EP_VALIDATE_READS "Abort on invalid historical reads during diagnostics only" OFF)
+option(EP_SANITIZE "Instrument project and JUCE with ASan/UBSan (Clang/GCC)" OFF)
+set(JUCE_SOURCE_DIR "" CACHE PATH "Optional local JUCE 7.0.12 source checkout")
+set(AAX_SDK_PATH "" CACHE PATH "Avid AAX SDK root (never commit the SDK)")
+if(EP_SANITIZE)
+ if(MSVC)
+  message(FATAL_ERROR "EP_SANITIZE requires Clang or GCC; use the Linux sanitizer CI job")
+ endif()
+ add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+ add_link_options(-fsanitize=address,undefined)
+endif()
+if(NOT JUCE_SOURCE_DIR)
+ include(FetchContent)
+ FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.git GIT_TAG 4f43011b96eb0636104cb3e433894cda98243626)
+ FetchContent_GetProperties(JUCE)
+ if(NOT juce_POPULATED)
+  FetchContent_Populate(JUCE)
+ endif()
+ set(JUCE_SOURCE_DIR "${juce_SOURCE_DIR}")
+endif()
+include(cmake/JuceCompatibility.cmake)
+add_subdirectory("${JUCE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/JUCE")
+set(formats VST3 Standalone)
+if(APPLE)
+ list(APPEND formats AU)
+endif()
+if(EP_ENABLE_AAX)
+ if(NOT (APPLE OR WIN32))
+  message(FATAL_ERROR "AAX is supported only on macOS and Windows")
+ endif()
+ if(NOT EXISTS "${AAX_SDK_PATH}/Interfaces/AAX.h")
+  message(FATAL_ERROR "EP_ENABLE_AAX requires a licensed Avid SDK: set AAX_SDK_PATH")
+ endif()
+ juce_set_aax_sdk_path("${AAX_SDK_PATH}")
+ list(APPEND formats AAX)
+endif()
+juce_add_plugin(EmotionalParticle
+ COMPANY_NAME "Spore Audio"
+ BUNDLE_ID "audio.spore.emotionalparticle"
+ PLUGIN_MANUFACTURER_CODE Spor PLUGIN_CODE Empr
+ FORMATS ${formats} PRODUCT_NAME "Emotional Particle"
+ IS_SYNTH FALSE NEEDS_MIDI_INPUT FALSE NEEDS_MIDI_OUTPUT FALSE IS_MIDI_EFFECT FALSE
+ EDITOR_WANTS_KEYBOARD_FOCUS FALSE COPY_PLUGIN_AFTER_BUILD FALSE
+ VST3_CATEGORIES Fx Granular AU_MAIN_TYPE kAudioUnitType_Effect
+ AAX_CATEGORY AAX_ePlugInCategory_Effect)
+target_sources(EmotionalParticle PRIVATE
+ Source/Plugin.cpp Source/DSP/GranularProcessor.cpp
+ Source/DSP/MoodPresetManager.cpp Source/Visual/GranularVisualizer.cpp)
+target_include_directories(EmotionalParticle PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Source")
+target_compile_definitions(EmotionalParticle PUBLIC
+ JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
+ JUCE_DISPLAY_SPLASH_SCREEN=0 JUCE_REPORT_APP_USAGE=0
+ $<$<BOOL:${EP_VALIDATE_READS}>:GRANULAR_VALIDATE_READS=1>)
+target_link_libraries(EmotionalParticle PRIVATE juce::juce_audio_utils
+ PUBLIC juce::juce_recommended_config_flags)
+if(MSVC)
+ target_compile_options(EmotionalParticle PRIVATE /Zi /FS)
+ foreach(format IN LISTS formats)
+  target_compile_options(EmotionalParticle_${format} PRIVATE /Zi /FS)
+  target_link_options(EmotionalParticle_${format} PRIVATE /DEBUG:FULL /OPT:REF /OPT:ICF)
+ endforeach()
+endif()
+if(BUILD_TESTING)
+ foreach(kind IN ITEMS Plugin Mood Visual Detail Core Stability)
+  add_executable(ep_${kind}_tests Tests/${kind}Tests.cpp)
+  target_include_directories(ep_${kind}_tests PRIVATE "${JUCE_SOURCE_DIR}/modules")
+  target_compile_definitions(ep_${kind}_tests PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
+  target_link_libraries(ep_${kind}_tests PRIVATE EmotionalParticle)
+  add_test(NAME ${kind} COMMAND ep_${kind}_tests)
+  set_tests_properties(${kind} PROPERTIES TIMEOUT 300)
+ endforeach()
+ # Test binaries must not recompile JUCE: link the plugin's shared code and its modules.
+ add_executable(ep_preview Tests/Render.cpp)
+ target_include_directories(ep_preview PRIVATE "${JUCE_SOURCE_DIR}/modules")
+ target_compile_definitions(ep_preview PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
+ target_link_libraries(ep_preview PRIVATE EmotionalParticle)
+endif()

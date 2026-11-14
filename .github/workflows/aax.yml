@@ -1,0 +1,20 @@
+name: AAX (licensed self-hosted builder)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  aax:
+    # This runner is configured by the maintainer with the licensed SDK already installed.
+    # Never download, upload or commit the proprietary SDK from this workflow.
+    runs-on: [self-hosted, aax]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with the local Avid SDK
+        shell: bash
+        run: |
+          test -n "$AAX_SDK_PATH"
+          cmake -S . -B build-aax -DEP_ENABLE_AAX=ON -DAAX_SDK_PATH="$AAX_SDK_PATH" -DBUILD_TESTING=OFF
+      - run: cmake --build build-aax --config Release --parallel 3
+      # Signing with PACE wraptool and Pro Tools testing remain on the licensed machine.
+      # Deliberately do not publish an unsigned build as an installable Pro Tools release.

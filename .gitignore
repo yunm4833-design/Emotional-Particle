@@ -1,0 +1,15 @@
+/build*/
+/native-build/
+/cross-build/
+/vendor/
+/.cache/
+*.o
+*.obj
+*.pdb
+*.dmp
+*.aaxplugin
+*.vst3
+*.component
+.DS_Store
+/preview*.png
+/validation/

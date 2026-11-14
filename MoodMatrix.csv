@@ -1,0 +1,9 @@
+mood,grainMs,densityHz,pitchSemitones,position01,timeSprayMs,pitchJitterSt,panJitter01,wet01,windowMorph_0Hann_1Gaussian_2Trapezoid,freeze01,grainSpreadMs,reverseProbability,rhythmJitter01,lowOctaveProbability,fifthProbability,highOctaveProbability,wowDepthSt,wowHz,flutterDepthSt,flutterHz,toneHz,trapezoidEdgeFraction,driveDb,backgroundHex,accentHex,secondaryHex
+Melancholic,160,48,0,.28,120,.08,.45,.78,1,0,40,0,.08,.14,.10,0,.03,.16,0,5,2600,.18,0,#151724,#8BA9E8,#6D608A
+Anxious,15,85,0,.08,450,12,1,.70,2,0,10,.12,.95,0,.05,.03,0,.5,0,7,14000,.04,0,#140B10,#FF3458,#9D234B
+Dreamy,80,65,0,.32,200,.12,1,.85,.35,0,20,0,.12,0,.10,.45,.08,.12,.01,5,10000,.25,0,#071613,#A8EAC8,#E2C68D
+Calm,420,5,0,.35,30,.04,.30,.65,0,0,80,0,.05,0,0,0,.12,.12,.01,3,14000,.45,0,#17221D,#A6BDA7,#EEE6D3
+Nostalgic,85,22,0,.20,80,.15,.50,.72,.6,0,25,.50,.22,.05,0,0,.25,.33,.035,5.8,4200,.20,0,#261B15,#DCA45F,#946749
+Hopeful,60,40,0,.18,95,.10,.8,.75,0,0,15,0,.08,0,.25,.25,.06,.18,.01,4,12000,.2,0,#0D1E20,#B8EFD4,#EFD49B
+Lonely,280,7,0,.55,340,.05,.7,.78,1,0,60,.22,.3,.28,0,0,.09,.08,.008,3,1800,.3,0,#121A29,#8DAACC,#596EAC
+Furious,18,95,-5,.1,230,3,.8,.85,2,0,10,.35,.65,.18,.06,0,.12,.4,.04,8,6500,.06,9,#260E0B,#FF784A,#FBC373

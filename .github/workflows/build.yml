@@ -1,0 +1,101 @@
+name: Build and validate
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Windows (MSVC x64)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON
+      - name: Configure macOS (Universal, VST3 and AU)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build -G Xcode '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build --config Release --parallel 3
+      - name: Regression and lifecycle tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Render actual UI (Windows)
+        if: runner.os == 'Windows'
+        run: .\build\Release\ep_preview.exe "$env:GITHUB_WORKSPACE\validation"
+      - name: Render actual UI (macOS)
+        if: runner.os == 'macOS'
+        run: ./build/Release/ep_preview "$GITHUB_WORKSPACE/validation"
+      - name: Validate macOS AU and architectures
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='build/EmotionalParticle_artefacts/Release'
+          for file in "$root/AU/Emotional Particle.component/Contents/MacOS/Emotional Particle" "$root/VST3/Emotional Particle.vst3/Contents/MacOS/Emotional Particle"; do
+            lipo -verify_arch arm64 x86_64 "$file"
+          done
+          codesign --force --deep --sign - "$root/AU/Emotional Particle.component"
+          codesign --force --deep --sign - "$root/VST3/Emotional Particle.vst3"
+          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
+          ditto "$root/AU/Emotional Particle.component" "$HOME/Library/Audio/Plug-Ins/Components/Emotional Particle.component"
+          killall -9 AudioComponentRegistrar || true
+          auval -v aufx Empr Spor
+      - name: Pluginval (Windows VST3, strictness 5)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip -OutFile pluginval.zip
+          Expand-Archive pluginval.zip -DestinationPath pluginval
+          $validator = Get-ChildItem pluginval -Filter pluginval.exe -Recurse | Select-Object -First 1
+          if (-not $validator) { throw 'pluginval executable missing' }
+          & $validator.FullName --strictness-level 5 --validate "$env:GITHUB_WORKSPACE\build\EmotionalParticle_artefacts\Release\VST3\Emotional Particle.vst3" --output-dir "$env:GITHUB_WORKSPACE\validation"
+          if ($LASTEXITCODE -ne 0) { throw 'pluginval failed' }
+      - name: Package Windows ZIP
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item -Recurse 'build/EmotionalParticle_artefacts/Release/VST3/Emotional Particle.vst3' dist/
+          Copy-Item README.md,README-中文.md,THIRD-PARTY.md,GPL-3.0.txt dist/
+          Compress-Archive -Path dist/* -DestinationPath EmotionalParticle-0.5-Windows-VST3.zip
+      - name: Package macOS ZIP
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          ditto 'build/EmotionalParticle_artefacts/Release/VST3/Emotional Particle.vst3' 'dist/Emotional Particle.vst3'
+          ditto 'build/EmotionalParticle_artefacts/Release/AU/Emotional Particle.component' 'dist/Emotional Particle.component'
+          cp README.md README-中文.md THIRD-PARTY.md GPL-3.0.txt dist/
+          ditto -c -k --sequesterRsrc --keepParent dist EmotionalParticle-0.5-macOS-Universal-VST3-AU.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EmotionalParticle-${{ runner.os }}
+          path: EmotionalParticle-*.zip
+      - name: Upload diagnostics and MSVC symbols
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Validation-${{ runner.os }}
+          path: |
+            validation/
+            build/Testing/Temporary/
+            build/**/*.pdb
+  sanitizers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libfreetype-dev libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev libgl1-mesa-dev xvfb
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DEP_SANITIZE=ON -DEP_VALIDATE_READS=ON -DBUILD_TESTING=ON
+      - run: cmake --build build --parallel 2
+      - name: ASan and UBSan (project and JUCE)
+        env:
+          ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: xvfb-run -a ctest --test-dir build --output-on-failure
