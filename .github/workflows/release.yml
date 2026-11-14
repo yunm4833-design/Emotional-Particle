@@ -25,7 +25,10 @@ jobs:
           [[ "$VALIDATED_RUN" =~ ^[0-9]+$ ]]
           gh api "repos/$GH_REPO/actions/runs/$VALIDATED_RUN" > run.json
           jq -e '.status == "completed" and .conclusion == "success" and .path == ".github/workflows/build.yml" and .head_branch == "main"' run.json
-          echo "RELEASE_COMMIT=$(jq -r .head_sha run.json)" >> "$GITHUB_ENV"
+          build_commit=$(jq -r .head_sha run.json)
+          git fetch --depth=1 origin tag v0.5.0-rc1
+          test "$(git rev-parse 'v0.5.0-rc1^{}')" = "$build_commit"
+          echo "RELEASE_COMMIT=$build_commit" >> "$GITHUB_ENV"
           gh run download "$VALIDATED_RUN" --name EmotionalParticle-Windows --name EmotionalParticle-macOS --dir release-assets
           test -s release-assets/EmotionalParticle-Windows/EmotionalParticle-0.5-Windows-VST3.zip
           test -s release-assets/EmotionalParticle-macOS/EmotionalParticle-0.5-macOS-Universal-VST3-AU.zip
@@ -33,21 +36,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > release-notes.md <<'NOTES'
-          Emotional Particle 0.5 preview / 测试版
-
-          - Windows x64 VST3：MSVC 原生构建，6 组回归测试及 pluginval strictness 5 通过。
-          - macOS Universal VST3 + AU：包含 Apple Silicon 与 Intel，AU 通过 auval；开发构建使用临时签名，尚未 Apple Developer ID 签名/公证。
-          - 放大参数标签、旋钮数值、心情按钮及辅助文字。
-          - 加入程序切换重入保护、参数有效性保护和旋钮绘制调整；全源码 ASan/UBSan 测试通过。
-
-          这是需要在 Live 12.4.16 复测的预发布版本，不能据自动测试保证原崩溃已完全消失。请关闭宿主后替换完整插件 bundle。
-
-          AAX 仅加入可选源码编译目标和专用构建流程；没有包含 Avid SDK、PACE 签名或可在 Pro Tools 中使用的 AAX 成品。
-
-          Original code MIT; combined JUCE 7 binaries use GPLv3 or a suitable commercial JUCE license. Complete original source is linked below at the build commit; JUCE is pinned to 4f43011b96eb0636104cb3e433894cda98243626, with compatibility changes documented in cmake/JuceCompatibility.cmake and THIRD-PARTY.md.
-          NOTES
-          printf '\nBuild commit: %s\nValidation: https://github.com/%s/actions/runs/%s\n' "$RELEASE_COMMIT" "$GH_REPO" "$VALIDATED_RUN" >> release-notes.md
           (cd release-assets/EmotionalParticle-Windows && sha256sum *.zip) > release-assets/SHA256SUMS.txt
           (cd release-assets/EmotionalParticle-macOS && sha256sum *.zip) >> release-assets/SHA256SUMS.txt
           # Maintainer creates the release first; automation only uploads validated assets.
