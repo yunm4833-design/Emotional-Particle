@@ -21,4 +21,3 @@ static Image createNSWindowSnapshot (NSWindow* window)
         return result;
     }
 }
-
