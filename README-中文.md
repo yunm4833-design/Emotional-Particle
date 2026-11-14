@@ -13,13 +13,13 @@
 
 ## 在 GitHub 下载
 
-进入仓库 **Actions → Build and validate → 成功的运行记录 → Artifacts**：
+已发布的预览版可在 [GitHub Releases](https://github.com/yunm4833-design/Emotional-Particle/releases) 下载；预览版仍需在 Live 中复测。每次提交的构建产物可进入仓库 **Actions → Build and validate → 成功的运行记录 → Artifacts**：
 
 - `EmotionalParticle-Windows`：Windows VST3 ZIP。
 - `EmotionalParticle-macOS`：通用 VST3 + AU ZIP。
 - `Validation-*`：测试结果、真实界面截图及 Windows 调试符号。
 
-GitHub 的 Artifacts 可能需要登录才能下载，且有保留期限。失败的运行不代表已经生成可用版本。公共构建不包含 AAX；当前还没有把构建产物发布成永久 Release。
+GitHub 的 Artifacts 可能需要登录才能下载，且有保留期限。失败的运行不代表已经生成可用版本。公共构建不包含 AAX；正式发布的预览版与这些临时构建产物分开保存。
 
 Windows 安装：关闭 Live，将完整的 `Emotional Particle.vst3` 文件夹放入 `C:\Program Files\Common Files\VST3`，覆盖旧版本后重新扫描。保留完整文件夹结构。默认插件 ID 与 0.4 一致，旧工程可识别。
 

@@ -48,8 +48,9 @@ jobs:
           Original code MIT; combined JUCE 7 binaries use GPLv3 or a suitable commercial JUCE license. Complete original source is linked below at the build commit; JUCE is pinned to 4f43011b96eb0636104cb3e433894cda98243626, with compatibility changes documented in cmake/JuceCompatibility.cmake and THIRD-PARTY.md.
           NOTES
           printf '\nBuild commit: %s\nValidation: https://github.com/%s/actions/runs/%s\n' "$RELEASE_COMMIT" "$GH_REPO" "$VALIDATED_RUN" >> release-notes.md
+          (cd release-assets && sha256sum EmotionalParticle-Windows/*.zip EmotionalParticle-macOS/*.zip > SHA256SUMS.txt)
           gh release create v0.5.0-rc1 --target "$RELEASE_COMMIT" --prerelease \
             --title 'Emotional Particle 0.5 — Windows VST3 / macOS VST3 + AU (Preview)' \
             --notes-file release-notes.md \
             release-assets/EmotionalParticle-Windows/*.zip \
-            release-assets/EmotionalParticle-macOS/*.zip
+            release-assets/EmotionalParticle-macOS/*.zip release-assets/SHA256SUMS.txt

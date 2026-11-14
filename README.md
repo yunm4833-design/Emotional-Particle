@@ -14,7 +14,7 @@ Version 0.5 increases UI label/value sizes and adds host-echo regression tests, 
 
 ## Download builds
 
-Open **Actions → Build and validate → a successful run → Artifacts**. Download `EmotionalParticle-Windows` or `EmotionalParticle-macOS`, then extract the inner plug-in ZIP. A GitHub sign-in may be required for Actions artifacts. Artifacts are retained by GitHub's retention policy; they are not a permanent Release. A failed job does not establish a working binary. AAX is not included in public CI artifacts.
+Published previews are available in [GitHub Releases](https://github.com/yunm4833-design/Emotional-Particle/releases). They are development builds that still need a Live retest. For per-commit builds, open **Actions → Build and validate → a successful run → Artifacts**. Download `EmotionalParticle-Windows` or `EmotionalParticle-macOS`, then extract the inner plug-in ZIP. A GitHub sign-in may be required for Actions artifacts. Artifacts are retained by GitHub's retention policy; they are separate from the versioned Release assets. A failed job does not establish a working binary. AAX is not included in public CI artifacts.
 
 Windows: copy the complete `Emotional Particle.vst3` bundle into `C:\Program Files\Common Files\VST3`, replace the old copy while Live is closed, then rescan in Live. The inner `.vst3` file alone is not the complete bundle.
 

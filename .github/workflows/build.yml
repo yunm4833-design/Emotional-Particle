@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           root='build/EmotionalParticle_artefacts/Release'
           for file in "$root/AU/Emotional Particle.component/Contents/MacOS/Emotional Particle" "$root/VST3/Emotional Particle.vst3/Contents/MacOS/Emotional Particle"; do
-            lipo -verify_arch arm64 x86_64 "$file"
+            lipo "$file" -verify_arch arm64 x86_64
           done
           codesign --force --deep --sign - "$root/AU/Emotional Particle.component"
           codesign --force --deep --sign - "$root/VST3/Emotional Particle.vst3"
