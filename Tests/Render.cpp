@@ -19,7 +19,7 @@ int main(int argc,char** argv){
  if(e->getWidth()!=900||std::abs(canvas->getTransform().mat00-.625f)>.002f)return 9;
  larger->onClick();
  if(e->getWidth()!=1080)return 10;
- e->setBoundsConstrained(0,0,1152,648);
+ e->setBoundsConstrained({0,0,1152,648});
  if(e->getWidth()!=1152||std::abs(p.getEditorScale()-.8f)>.001f)return 11;
  e->setSize(1080,608);
  int block=0;

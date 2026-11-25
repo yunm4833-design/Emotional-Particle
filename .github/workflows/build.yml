@@ -1,6 +1,7 @@
 name: Build and validate
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -71,7 +72,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist
+          mkdir -p dist/docs
+          cp docs/MAC-SIGNING.md dist/docs/
           ditto 'build/EmotionalParticle_artefacts/Release/VST3/Emotional Particle.vst3' 'dist/Emotional Particle.vst3'
           ditto 'build/EmotionalParticle_artefacts/Release/AU/Emotional Particle.component' 'dist/Emotional Particle.component'
           cp README.md README-中文.md THIRD-PARTY.md GPL-3.0.txt dist/

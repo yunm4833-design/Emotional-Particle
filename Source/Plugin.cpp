@@ -189,7 +189,7 @@ class EmotionalEditor final:public juce::AudioProcessorEditor,private juce::Time
  std::array<juce::Label,12> detailLabels;
  std::array<juce::TextButton,8> buttons;
  juce::TextButton previous{"<"},next{">"},power,detailsButton{"SOUND DETAILS  +"},resetButton{"RESET DETAILS"};
- juce::TextButton smaller{"−"}, larger{"+"};
+ juce::TextButton smaller{"-"}, larger{"+"};
  juce::Label zoomLabel;
  juce::ToggleButton freeze{"FREEZE"};
  std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> intensityA,trimA;
