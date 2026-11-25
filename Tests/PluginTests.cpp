@@ -19,6 +19,47 @@ int main(){try{
  bypass->setValueNotifyingHost(0);p.prepareToPlay(48000,64);
  for(int block=0;block<32;++block){for(int c=0;c<2;++c)for(int n=0;n<64;++n)dry.setSample(c,n,.25f);p.processBlockBypassed(dry,midi);}
  check(dry.getSample(0,63)==.25f&&dry.getSample(1,63)==.25f,"Host callback unity bypass");
- restored.setStateInformation("bad",3);check(restored.getCurrentProgram()==1,"Malformed state");
+ auto* mix=p.state.getParameter("mix");
+ check(mix->getText(0.f,32)=="0%"&&mix->getText(1.f,32)=="100%","Mix endpoint display");
+ set("output",0);
+ set("mix",1);
+ p.prepareToPlay(48000,64);
+ for(int block=0;block<1000;++block) {
+  for(int n=0;n<64;++n) {
+   const float input=.25f*std::sin(float(block*64+n)*.04f);
+   dry.setSample(0,n,input);
+   dry.setSample(1,n,-input);
+  }
+  p.processBlock(dry,midi);
+ }
+ check(p.voices.load()>0,"A live grain is required for the zero-mix regression");
+ set("freeze",1);
+ set("mix",0);
+ p.setCurrentProgram(2);
+ set("intensity",1);
+ for(int block=0;block<48;++block) {
+  for(int n=0;n<64;++n) {
+   dry.setSample(0,n,.125f);
+   dry.setSample(1,n,-.25f);
+  }
+  p.processBlock(dry,midi);
+  if(block>=19)for(int n=0;n<64;++n)
+   check(dry.getSample(0,n)==.125f&&dry.getSample(1,n)==-.25f,"Wet signal leaked at zero mix");
+ }
+ p.setEditorScale(.5f);
+ p.getStateInformation(block);
+ restored.setStateInformation(block.getData(),int(block.getSize()));
+ check(restored.state.getRawParameterValue("mix")->load()==0.f&&restored.getEditorScale()==.5f,
+       "New zero mix and editor scale survive state restore");
+ auto oldState=p.state.copyState();
+ oldState.removeProperty("absoluteMix",nullptr);
+ oldState.getChildWithProperty("id","mood").setProperty("value",4,nullptr);
+ oldState.getChildWithProperty("id","intensity").setProperty("value",.5f,nullptr);
+ oldState.getChildWithProperty("id","mix").setProperty("value",-.2f,nullptr);
+ juce::AudioProcessor::copyXmlToBinary(*oldState.createXml(),block);
+ restored.setStateInformation(block.getData(),int(block.getSize()));
+ check(std::abs(restored.state.getRawParameterValue("mix")->load()-.26f)<.0005f,
+       "Legacy wet offset must migrate to its actual wet ratio");
+ restored.setStateInformation("bad",3);check(restored.getCurrentProgram()==4,"Malformed state");
  std::cout<<"PASS: host mono/stereo, sample rates/block sizes, programs and state\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

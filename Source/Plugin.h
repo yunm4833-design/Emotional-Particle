@@ -23,6 +23,8 @@ public:
  void changeProgramName(int,const juce::String&) override{}
  void getStateInformation(juce::MemoryBlock&) override;
  void setStateInformation(const void*,int) override;
+ float getEditorScale() const noexcept { return editorScale.load(std::memory_order_relaxed); }
+ void setEditorScale(float) noexcept;
  juce::AudioProcessorValueTreeState state;
  granular::VisualTelemetry visualTelemetry;
  std::atomic<float> meter{0}, activity{0};
@@ -34,7 +36,8 @@ private:
  granular::DetailParameters details() const noexcept;
  granular::GranularProcessor engine;
  granular::MoodPresetManager moods;
- juce::SmoothedValue<float> outputGain,bypassBlend;
+ juce::SmoothedValue<float> outputGain,bypassBlend,wetMix;
+ std::atomic<float> editorScale{.75f};
  std::array<std::atomic<float>*,17> raw{};
  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EmotionalProcessor)
 };

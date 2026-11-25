@@ -228,6 +228,8 @@ std::array<float,2> GranularProcessor::processSmoothedSample(float inL,float inR
         toneState[0] += a*(wetL-toneState[0]);toneState[1] += a*(wetR-toneState[1]);
         ++sampleClock;
         if(telemetry && sampleClock%std::uint64_t(visualInterval)==0)telemetry->audioClock.store(sampleClock,std::memory_order_release);
+        if(f[Mix] <= 0.f) return {inL,inR};
+        if(f[Mix] >= 1.f) return toneState;
         return {(1.f-f[Mix])*inL+f[Mix]*toneState[0], (1.f-f[Mix])*inR+f[Mix]*toneState[1]};
 }
 

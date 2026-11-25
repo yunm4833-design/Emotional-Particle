@@ -2,6 +2,10 @@
 
 A mood-driven real-time granular audio effect made with JUCE and C++17. Eight moods, 128 fixed grain voices, stereo history/freeze, 800 ms mood morphs, twelve detail controls and an audio-reactive particle interface.
 
+Version 0.6 adds absolute 0–100% Mix and 50–125% interface scaling. Mix controls the wet ratio independently of Intensity, which still controls grain variation. Changes ramp over 25 ms to prevent clicks. At 0%, the signal is dry and Output trim still applies. Existing saved projects migrate their old offset to the wet ratio at the saved mood and Intensity. Existing Mix automation now sets the absolute wet ratio.
+
+Use the − and + buttons near the bottom right to change interface size, or drag the resize corner where the host allows it. The default is 75%. Size is saved with the plug-in state.
+
 Version 0.5 increases UI label/value sizes and adds host-echo regression tests, concurrent automation/editor lifecycle stress, parameter sanitisation, filled rotary arcs, and reproducible native platform builds. The plug-in IDs and parameter IDs remain compatible with 0.4.
 
 | Platform | Formats | Build target |
@@ -18,7 +22,7 @@ Published previews are available in [GitHub Releases](https://github.com/yunm483
 
 Windows: copy the complete `Emotional Particle.vst3` bundle into `C:\Program Files\Common Files\VST3`, replace the old copy while Live is closed, then rescan in Live. The inner `.vst3` file alone is not the complete bundle.
 
-macOS: copy `.vst3` into `~/Library/Audio/Plug-Ins/VST3/` and `.component` into `~/Library/Audio/Plug-Ins/Components/`. CI binaries are ad-hoc signed development builds, not Apple Developer ID signed/notarized releases. AAX needs a separate licensed installation/signing process.
+macOS: copy `.vst3` into `~/Library/Audio/Plug-Ins/VST3/` and `.component` into `~/Library/Audio/Plug-Ins/Components/`. CI binaries are ad-hoc signed development builds, not Apple Developer ID signed/notarized releases. See [macOS signing and notarization](docs/MAC-SIGNING.md) for the Developer ID installer workflow. AAX needs a separate licensed installation/signing process.
 
 ## Build
 

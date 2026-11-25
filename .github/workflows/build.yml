@@ -65,7 +65,7 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item -Recurse 'build/EmotionalParticle_artefacts/Release/VST3/Emotional Particle.vst3' dist/
           Copy-Item README.md,README-中文.md,THIRD-PARTY.md,GPL-3.0.txt dist/
-          Compress-Archive -Path dist/* -DestinationPath EmotionalParticle-0.5-Windows-VST3.zip
+          Compress-Archive -Path dist/* -DestinationPath EmotionalParticle-0.6-Windows-VST3.zip
       - name: Package macOS ZIP
         if: runner.os == 'macOS'
         shell: bash
@@ -75,7 +75,7 @@ jobs:
           ditto 'build/EmotionalParticle_artefacts/Release/VST3/Emotional Particle.vst3' 'dist/Emotional Particle.vst3'
           ditto 'build/EmotionalParticle_artefacts/Release/AU/Emotional Particle.component' 'dist/Emotional Particle.component'
           cp README.md README-中文.md THIRD-PARTY.md GPL-3.0.txt dist/
-          ditto -c -k --sequesterRsrc --keepParent dist EmotionalParticle-0.5-macOS-Universal-VST3-AU.zip
+          ditto -c -k --sequesterRsrc --keepParent dist EmotionalParticle-0.6-macOS-Universal-VST3-AU.zip
       - uses: actions/upload-artifact@v4
         with:
           name: EmotionalParticle-${{ runner.os }}
