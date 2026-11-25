@@ -21,7 +21,7 @@ int main(int argc,char** argv){
  if(e->getWidth()!=1080)return 10;
  e->setBoundsConstrained(0,0,1152,648);
  if(e->getWidth()!=1152||std::abs(p.getEditorScale()-.8f)>.001f)return 11;
- e->setBoundsConstrained(0,0,1080,608);
+ e->setSize(1080,608);
  int block=0;
  auto audio=[&]{for(int n=0;n<480;++n){float t=float(block*480+n)/48000;float s=.30f*std::sin(juce::MathConstants<float>::twoPi*110*t)+.1f*std::sin(juce::MathConstants<float>::twoPi*441*t);b.setSample(0,n,s);b.setSample(1,n,s*.8f);}p.processBlock(b,midi);++block;};
  e->createComponentSnapshot(e->getLocalBounds());

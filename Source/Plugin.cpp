@@ -34,7 +34,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout EmotionalProcessor::layout()
   juce::AudioParameterFloatAttributes attributes;
   if(n+4==mixIndex) {
    attributes=attributes.withStringFromValueFunction([](float value,int length) {
-    return formatMix(value).substring(0,length);
+    const auto text=formatMix(value);
+    return length>0?text.substring(0,length):text;
    }).withValueFromStringFunction([](const juce::String& text) { return text.getFloatValue() / 100.f; });
   }
   p.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{ids[n+4],1},labels[n],
@@ -110,7 +111,7 @@ void EmotionalProcessor::setStateInformation(const void* data,int size) {
  if(!snapshot.hasProperty(mixSchema)) {
   const auto read=[&](const char* id,float fallback,float min,float max) {
    const auto entry=snapshot.getChildWithProperty("id",id);
-   const auto value=static_cast<float>(entry.getProperty("value",fallback));
+   const auto value=entry.isValid()?static_cast<float>(entry.getProperty("value",fallback)):fallback;
    return std::isfinite(value)?std::clamp(value,min,max):fallback;
   };
   const int mood=int(std::lround(read("mood",2.f,0.f,7.f)));
