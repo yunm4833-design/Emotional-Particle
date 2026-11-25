@@ -15,6 +15,12 @@ juce::String formatMix(double proportion) {
  return juce::String(percent, percent == std::floor(percent) ? 0 : 1) + "%";
 }
 
+float outputGainFor(float decibels) noexcept {
+ // The 0.01 dB interval can round the top step slightly below 0 on FMA targets.
+ if(decibels>=-.005f)return 1.f;
+ return juce::Decibels::decibelsToGain(decibels);
+}
+
 float clampScale(float value) noexcept {
  return std::isfinite(value) ? std::clamp(value, minScale, maxScale) : defaultScale;
 }
@@ -64,7 +70,7 @@ void EmotionalProcessor::prepareToPlay(double sr,int){
  bypassBlend.reset(sr,.03);bypassBlend.setCurrentAndTargetValue(parameter(16));
  wetMix.reset(sr,.025);
  wetMix.setCurrentAndTargetValue(parameter(mixIndex));
- outputGain.reset(sr,.03);outputGain.setCurrentAndTargetValue(juce::Decibels::decibelsToGain(parameter(3)));meter=0;activity=0;voices=0;
+ outputGain.reset(sr,.03);outputGain.setCurrentAndTargetValue(outputGainFor(parameter(3)));meter=0;activity=0;voices=0;
 }
 bool EmotionalProcessor::isBusesLayoutSupported(const BusesLayout& b) const{
  auto c=b.getMainOutputChannelSet();return (c==juce::AudioChannelSet::mono()||c==juce::AudioChannelSet::stereo())&&c==b.getMainInputChannelSet();
@@ -79,7 +85,7 @@ void EmotionalProcessor::process(juce::AudioBuffer<float>& audio,juce::MidiBuffe
  moods.setTarget(mood,parameter(1),parameter(2)>.5f,details());
  bypassBlend.setTargetValue(hostBypassed?1.f:parameter(16));
  wetMix.setTargetValue(parameter(mixIndex));
- outputGain.setTargetValue(juce::Decibels::decibelsToGain(parameter(3)));
+ outputGain.setTargetValue(outputGainFor(parameter(3)));
  auto* l=audio.getWritePointer(0);auto* r=audio.getNumChannels()==2?audio.getWritePointer(1):nullptr;
  float peak=0;double energy=0;
  for(int n=0;n<audio.getNumSamples();++n){

@@ -1,5 +1,6 @@
 #include "Plugin.h"
 #include <iostream>
+#include <iomanip>
 #include <stdexcept>
 void check(bool b,const char* m){if(!b)throw std::runtime_error(m);}
 int main(){try{
@@ -43,8 +44,13 @@ int main(){try{
    dry.setSample(1,n,-.25f);
   }
   p.processBlock(dry,midi);
-  if(block>=19)for(int n=0;n<64;++n)
-   check(dry.getSample(0,n)==.125f&&dry.getSample(1,n)==-.25f,"Wet signal leaked at zero mix");
+  if(block>=19)for(int n=0;n<64;++n) {
+   if(dry.getSample(0,n)==.125f&&dry.getSample(1,n)==-.25f)continue;
+   std::cerr<<std::setprecision(10)<<"Zero Mix output "<<dry.getSample(0,n)<<", "
+            <<dry.getSample(1,n)<<"; trim "<<p.state.getRawParameterValue("output")->load()
+            <<"; mix "<<p.state.getRawParameterValue("mix")->load()<<'\n';
+   check(false,"Zero Mix output differs from dry input at unity trim");
+  }
  }
  p.setEditorScale(.5f);
  p.getStateInformation(block);
