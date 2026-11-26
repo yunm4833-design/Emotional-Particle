@@ -8,13 +8,15 @@ int main(int argc,char** argv){
  std::unique_ptr<juce::AudioProcessorEditor> e(p.createEditor());
  auto* canvas=e->getChildComponent(0);
  if(canvas==nullptr||!e->isResizable()||e->getWidth()!=1080)return 7;
+ granular::GranularVisualizer* visualizer=nullptr;
  juce::TextButton* smaller=nullptr;
  juce::TextButton* larger=nullptr;
  for(auto* child:canvas->getChildren()) {
+  if(auto* view=dynamic_cast<granular::GranularVisualizer*>(child))visualizer=view;
   if(child->getTitle()=="Decrease interface size")smaller=dynamic_cast<juce::TextButton*>(child);
   if(child->getTitle()=="Increase interface size")larger=dynamic_cast<juce::TextButton*>(child);
  }
- if(!smaller||!larger)return 8;
+ if(!smaller||!larger||!visualizer)return 8;
  smaller->onClick();
  if(e->getWidth()!=900||std::abs(canvas->getTransform().mat00-.625f)>.002f)return 9;
  larger->onClick();
@@ -22,6 +24,32 @@ int main(int argc,char** argv){
  e->setBoundsConstrained({0,0,1152,648});
  if(e->getWidth()!=1152||std::abs(p.getEditorScale()-.8f)>.001f)return 11;
  e->setSize(1080,608);
+ const auto snapshot=[&] {return e->createComponentSnapshot(e->getLocalBounds());};
+ const auto waveBrightness=[](const juce::Image& image) {
+  double total=0;
+  for(int y=110;y<290;y+=3)for(int x=160;x<920;x+=3)
+   total+=image.getPixelAt(x,y).getBrightness();
+  return total;
+ };
+ const auto quiet=snapshot();
+ for(int hit=0;hit<4;++hit) {
+  for(int n=0;n<480;++n) {
+   const float sample=.85f*std::sin(float(hit*480+n)*.025f);
+   b.setSample(0,n,sample);b.setSample(1,n,sample*.8f);
+  }
+  p.processBlock(b,midi);
+  juce::Thread::sleep(8);
+  visualizer->refreshNow();
+ }
+ const auto attack=snapshot();
+ if(waveBrightness(attack)<waveBrightness(quiet)*1.2) {
+  std::cerr<<"The input pulse did not brighten the rendered wave\n";
+  return 14;
+ }
+ juce::FileOutputStream pulseOut(outDir.getChildFile("preview-pulse.png"));
+ pulseOut.setPosition(0);pulseOut.truncate();
+ if(!juce::PNGImageFormat().writeImageToStream(attack,pulseOut))return 15;
+ std::cout<<"PASS: rendered audio pulse brightens the wave\n";
  int block=0;
  auto audio=[&]{for(int n=0;n<480;++n){float t=float(block*480+n)/48000;float s=.30f*std::sin(juce::MathConstants<float>::twoPi*110*t)+.1f*std::sin(juce::MathConstants<float>::twoPi*441*t);b.setSample(0,n,s);b.setSample(1,n,s*.8f);}p.processBlock(b,midi);++block;};
  e->createComponentSnapshot(e->getLocalBounds());

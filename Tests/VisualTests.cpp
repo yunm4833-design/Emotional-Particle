@@ -33,6 +33,18 @@ int main(){try{
  GrainVisualModel fixture;VisualTelemetry events;GrainEvent a;a.kind=GrainEventKind::Update;a.generation=1;a.id=2;a.slot=0;a.birthSample=0;a.length=24000;a.sampleStamp=100;a.duration=.5f;a.sourceLevel=.1f;a.wet=1;
  events.send(a);a.id=1;a.kind=GrainEventKind::End;events.send(a);events.audioClock=100;fixture.ingest(events);CHECK(fixture.activeCount()==1);
  events.audioClock=24001;fixture.ingest(events);CHECK(fixture.activeCount()==0);
+ // A complete short grain can pass between two UI refreshes. Keep its peak
+ // for the visual tail while still reporting zero active DSP grains.
+ GrainEvent brief;
+ brief.kind=GrainEventKind::Update;brief.generation=1;brief.id=3;brief.slot=1;
+ brief.sampleRate=48000;brief.birthSample=24001;brief.sampleStamp=24121;
+ brief.length=240;brief.envelopeGain=1;brief.sourceLevel=.2f;brief.wet=.5f;
+ events.send(brief);
+ brief.kind=GrainEventKind::End;brief.sampleStamp=24240;events.send(brief);
+ events.audioClock=24300;fixture.ingest(events);
+ CHECK(fixture.activeCount()==0&&fixture.particles[1].pendingPeak>.5f);
+ events.audioClock=30000;fixture.ingest(events);
+ CHECK(fixture.particles[1].pendingPeak==0);
  std::cout<<"PASS: FIFO overflow/wrap and 500k concurrent transfers; audio bit equality; per-grain metadata; model/voice count equality; closed-UI recovery; monotonic reset; stale End rejection; callback allocation guard\n";
  return 0;
 }catch(const std::exception& e){forbid=false;std::cerr<<e.what()<<'\n';return 1;}}
