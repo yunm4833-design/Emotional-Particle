@@ -1,9 +1,91 @@
 #include "Plugin.h"
 #include "Visual/GranularVisualizer.h"
 #include <iostream>
+
+namespace {
+class FixedViewport final : public juce::Component {
+public:
+ int editorBoundsChanges=0;
+ void childBoundsChanged(juce::Component*) override { ++editorBoundsChanges; }
+};
+
+bool checkInlineAuDetails(const juce::File& outDir) {
+ juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_AudioUnit);
+ EmotionalProcessor processor;
+ juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Undefined);
+
+ for(const float scale:{.5f,.75f,1.25f}) {
+  processor.setEditorScale(scale);
+  FixedViewport host;
+  std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
+  host.setSize(editor->getWidth(),editor->getHeight());
+  host.addAndMakeVisible(*editor);
+  auto* canvas=editor->getChildComponent(0);
+  if(canvas==nullptr)return false;
+
+  juce::TextButton* details=nullptr;
+  juce::TextButton* reset=nullptr;
+  juce::Slider* pitch=nullptr;
+  for(auto* child:canvas->getChildren()) {
+   if(auto* button=dynamic_cast<juce::TextButton*>(child)) {
+    if(button->getButtonText().startsWith("SOUND DETAILS"))details=button;
+    if(button->getButtonText()=="RESET DETAILS")reset=button;
+   }
+   if(auto* slider=dynamic_cast<juce::Slider*>(child);slider&&slider->getTitle()=="PITCH")
+    pitch=slider;
+  }
+  const auto hitTest=[&](juce::Component& control) {
+   const auto centre=host.getLocalPoint(&control,control.getLocalBounds().getCentre());
+   auto* hit=host.getComponentAt(centre);
+   return hit==&control||control.isParentOf(hit);
+  };
+  if(!details||!reset||!pitch||!hitTest(*details)||pitch->isVisible())return false;
+  host.editorBoundsChanges=0;
+  details->onClick();
+  if(host.editorBoundsChanges!=0||editor->getBounds()!=host.getLocalBounds())return false;
+
+  int usableDetails=0;
+  for(auto* child:canvas->getChildren()) {
+   auto* slider=dynamic_cast<juce::Slider*>(child);
+   if(!slider||!slider->isVisible()||slider->getComponentID()=="side"
+      ||slider->getSliderStyle()!=juce::Slider::RotaryHorizontalVerticalDrag
+      ||slider->getComponentID()=="intensity")
+    continue;
+   if(!host.getLocalBounds().contains(host.getLocalArea(slider,slider->getLocalBounds()))
+      ||!hitTest(*slider))
+    return false;
+   ++usableDetails;
+  }
+  if(usableDetails!=8||!hitTest(*reset))return false;
+  pitch->setValue(5,juce::sendNotificationSync);
+  if(std::abs(processor.state.getRawParameterValue("pitch")->load()-5)>.001f)return false;
+  reset->onClick();
+  if(std::abs(processor.state.getRawParameterValue("pitch")->load())>.001f)return false;
+
+  if(scale==.75f) {
+   auto image=editor->createComponentSnapshot(editor->getLocalBounds());
+   juce::FileOutputStream preview(outDir.getChildFile("preview-au-details.png"));
+   if(!preview.openedOk())return false;
+   preview.setPosition(0);preview.truncate();
+   if(!juce::PNGImageFormat().writeImageToStream(image,preview))return false;
+  }
+  if(!hitTest(*details))return false;
+  details->onClick();
+  if(host.editorBoundsChanges!=0||pitch->isVisible()||reset->isVisible())return false;
+ }
+ return true;
+}
+}
+
 int main(int argc,char** argv){
  const juce::File outDir=argc>1?juce::File(juce::String(argv[1])):juce::File::getCurrentWorkingDirectory();outDir.createDirectory();
- juce::ScopedJuceInitialiser_GUI init;EmotionalProcessor p;p.prepareToPlay(48000,480);
+ juce::ScopedJuceInitialiser_GUI init;
+ if(!checkInlineAuDetails(outDir)) {
+  std::cerr<<"AU details failed in a fixed-size host viewport\n";
+  return 16;
+ }
+ std::cout<<"PASS: eight AU detail controls and toggle are usable at 50%, 75%, and 125% without changing window bounds\n";
+ EmotionalProcessor p;p.prepareToPlay(48000,480);
  juce::AudioBuffer<float> b(2,480);juce::MidiBuffer midi;
  std::unique_ptr<juce::AudioProcessorEditor> e(p.createEditor());
  auto* canvas=e->getChildComponent(0);

@@ -220,7 +220,14 @@ class EmotionalEditor final:public juce::AudioProcessorEditor,private juce::Time
   peak=std::max(processor.meter.load(),peak*.92f);trim.setColour(juce::Slider::thumbColourId,look.accent);trim.setColour(juce::Slider::trackColourId,look.accent);visualizer.setTheme(background,look.accent,look.secondary,selected);visualizer.setEffectEnabled(!power.getToggleState());
   for(auto& l:detailLabels)l.setColour(juce::Label::textColourId,look.accent.withAlpha(.95f));repaint();
  }
- int layoutHeight() const noexcept { return expanded?expandedHeight:compactHeight; }
+ bool usesInlineDetails() const noexcept {
+  return processor.wrapperType==juce::AudioProcessor::wrapperType_AudioUnit
+      || processor.wrapperType==juce::AudioProcessor::wrapperType_AudioUnitv3;
+ }
+ int layoutHeight() const noexcept {
+  return expanded&&!usesInlineDetails()?expandedHeight:compactHeight;
+ }
+ int detailsPanelTop() const noexcept { return usesInlineDetails()?535:821; }
  void applySize(float requestedScale) {
   const juce::ScopedValueSetter<bool> guard(applyingSize,true);
   const float scale=clampScale(requestedScale);
@@ -236,6 +243,7 @@ class EmotionalEditor final:public juce::AudioProcessorEditor,private juce::Time
   resized();
  }
  void setExpanded(bool on) {
+  const int oldHeight=layoutHeight();
   expanded=on;
   detailsButton.setButtonText(on?"SOUND DETAILS  -":"SOUND DETAILS  +");
   for(int n=4;n<12;++n) {
@@ -243,7 +251,13 @@ class EmotionalEditor final:public juce::AudioProcessorEditor,private juce::Time
    detailLabels[n].setVisible(on);
   }
   resetButton.setVisible(on);
-  applySize(processor.getEditorScale());
+  // An AU host may keep the original viewport size after a resize request.
+  // The AU panel fits inside that viewport and only needs a child layout update.
+  if(layoutHeight()!=oldHeight)applySize(processor.getEditorScale());
+  else {
+   layoutControls();
+   repaint();
+  }
  }
 
 public:
@@ -284,7 +298,7 @@ public:
   zoomLabel.setFont(emotional::font(17));
   zoomLabel.setTitle("Interface size");
   canvas.addAndMakeVisible(zoomLabel);
-  peak=processor.meter.load();setExpanded(false);setResizable(true,true);startTimerHz(60);
+  peak=processor.meter.load();setExpanded(false);applySize(processor.getEditorScale());setResizable(true,true);startTimerHz(60);
  }
  ~EmotionalEditor() override{stopTimer();setLookAndFeel(nullptr);}
  void resized() override {
@@ -299,16 +313,24 @@ public:
   zoomLabel.setText(juce::String(juce::roundToInt(appliedScale*100))+"%",juce::dontSendNotification);
   smaller.setEnabled(appliedScale>minScale);
   larger.setEnabled(appliedScale<maxScale);
+  layoutControls();
+ }
+private:
+ void layoutControls() {
   smaller.setBounds(1190,772,35,32);
   zoomLabel.setBounds(1226,772,64,32);
   larger.setBounds(1291,772,35,32);
-  visualizer.setBounds(140,104,1160,420);intensity.setBounds(570,382,300,300);
+  const bool inlineOpen=expanded&&usesInlineDetails();
+  visualizer.setBounds(140,104,1160,420);
+  intensity.setBounds(inlineOpen?juce::Rectangle<int>(610,310,220,220)
+                                :juce::Rectangle<int>(570,382,300,300));
   trim.setBounds(1080,71,250,28);freeze.setBounds(1180,105,130,28);power.setBounds(1368,31,45,45);
   previous.setBounds(505,40,36,33);next.setBounds(899,40,36,33);
   const int xs[]={32,32,1300,1300},ys[]={178,371,178,371};for(int n=0;n<4;++n){detailLabels[n].setBounds(xs[n],ys[n],108,24);detailSliders[n].setBounds(xs[n],ys[n]+25,108,125);}
   for(int n=0;n<8;++n)buttons[n].setBounds(40+n*172,722,160,50);
-  detailsButton.setBounds(610,777,220,30);resetButton.setBounds(1170,826,210,30);
-  for(int n=4;n<12;++n){int x=72+(n-4)*164;detailLabels[n].setBounds(x,855,140,22);detailSliders[n].setBounds(x+12,881,116,108);}
+  const int panelTop=detailsPanelTop();
+  detailsButton.setBounds(610,777,220,30);resetButton.setBounds(1170,panelTop+5,210,30);
+  for(int n=4;n<12;++n){int x=72+(n-4)*164;detailLabels[n].setBounds(x,panelTop+34,140,22);detailSliders[n].setBounds(x+12,panelTop+60,116,108);}
  }
  void paint(juce::Graphics& g) override {
   g.fillAll(background.darker(.55f));
@@ -324,7 +346,18 @@ public:
   const float meterLevel=juce::jlimit(0.f,1.f,(juce::Decibels::gainToDecibels(peak,-60.f)+60.f)/60.f);
   for(int n=0;n<21;++n){g.setColour(n<meterLevel*21?look.accent:look.accent.withAlpha(.1f));g.fillRoundedRectangle(1082+n*10,43,4,15,1);}
   g.setColour(look.accent.withAlpha(.15f));g.drawLine(1344,32,1344,80,1);g.drawLine(26,357,134,357,.7f);g.drawLine(1304,357,1412,357,.7f);
-  if(expanded){g.setGradientFill(juce::ColourGradient(juce::Colours::white.withAlpha(.045f),28,821,look.accent.withAlpha(.02f),1412,994,false));g.fillRoundedRectangle(28,821,1384,178,16);g.setColour(look.accent.withAlpha(.13f));g.drawRoundedRectangle(28,821,1384,178,16,1);g.setColour(look.accent.withAlpha(.9f));g.setFont(emotional::font(17,.07f));g.drawText("SCULPT THE FEELING",59,828,320,20,juce::Justification::centredLeft);}
+  if(expanded) {
+   const auto top=float(detailsPanelTop());
+   const juce::Rectangle<float> panel(28.f,top,1384.f,178.f);
+   g.setGradientFill(juce::ColourGradient(juce::Colours::white.withAlpha(.045f),panel.getTopLeft(),
+                                         look.accent.withAlpha(.02f),panel.getBottomRight(),false));
+   g.fillRoundedRectangle(panel,16.f);
+   g.setColour(look.accent.withAlpha(.13f));
+   g.drawRoundedRectangle(panel,16.f,1.f);
+   g.setColour(look.accent.withAlpha(.9f));
+   g.setFont(emotional::font(17,.07f));
+   g.drawText("SCULPT THE FEELING",59,detailsPanelTop()+7,320,20,juce::Justification::centredLeft);
+  }
  }
 };
 juce::AudioProcessorEditor* EmotionalProcessor::createEditor(){return new EmotionalEditor(*this);}

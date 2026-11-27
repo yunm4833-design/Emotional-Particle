@@ -2,6 +2,8 @@
 
 A mood-driven real-time granular audio effect made with JUCE and C++17. Eight moods, 128 fixed grain voices, stereo history/freeze, 800 ms mood morphs, twelve detail controls and an audio-reactive particle interface.
 
+Version 0.6.2 opens Sound Details inside the AU editor so the controls stay visible when the host keeps the window at its current size.
+
 Version 0.6.1 makes audible grains brighter and adds a short afterglow for grains that finish between display frames. Input attacks light up the waveform and send a pulse out from its centre.
 
 Version 0.6 adds absolute 0–100% Mix and 50–125% interface scaling. Mix controls the wet ratio independently of Intensity, which still controls grain variation. Changes ramp over 25 ms to prevent clicks. At 0%, the signal is dry and Output trim still applies. Existing saved projects migrate their old offset to the wet ratio at the saved mood and Intensity. Existing Mix automation now sets the absolute wet ratio.
