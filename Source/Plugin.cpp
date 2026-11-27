@@ -195,6 +195,7 @@ class EmotionalEditor final:public juce::AudioProcessorEditor,private juce::Time
  std::array<juce::Label,12> detailLabels;
  std::array<juce::TextButton,8> buttons;
  juce::TextButton previous{"<"},next{">"},power,detailsButton{"SOUND DETAILS  +"},resetButton{"RESET DETAILS"};
+ juce::TextButton headerDetailsButton{"SOUND DETAILS  +"};
  juce::TextButton smaller{"-"}, larger{"+"};
  juce::Label zoomLabel;
  juce::ToggleButton freeze{"FREEZE"};
@@ -245,7 +246,9 @@ class EmotionalEditor final:public juce::AudioProcessorEditor,private juce::Time
  void setExpanded(bool on) {
   const int oldHeight=layoutHeight();
   expanded=on;
-  detailsButton.setButtonText(on?"SOUND DETAILS  -":"SOUND DETAILS  +");
+  const auto text=on?"SOUND DETAILS  -":"SOUND DETAILS  +";
+  detailsButton.setButtonText(text);
+  headerDetailsButton.setButtonText(text);
   for(int n=4;n<12;++n) {
    detailSliders[n].setVisible(on);
    detailLabels[n].setVisible(on);
@@ -283,6 +286,17 @@ public:
   for(int n=0;n<8;++n){buttons[n].setButtonText(granular::MoodPresetManager::presets[order[n]].name);buttons[n].onClick=[this,n]{selectMood(order[n]);};buttons[n].setToggleState(order[n]==selected,juce::dontSendNotification);canvas.addAndMakeVisible(buttons[n]);}
   for(auto* b:{&previous,&next,&detailsButton,&resetButton}){b->setComponentID("textOnly");canvas.addAndMakeVisible(*b);}
   previous.onClick=[this]{selectMood((processor.getCurrentProgram()+7)%8);};next.onClick=[this]{selectMood((processor.getCurrentProgram()+1)%8);};detailsButton.onClick=[this]{setExpanded(!expanded);};
+  if(usesInlineDetails()) {
+   detailsButton.setTitle("Sound Details shortcut");
+   headerDetailsButton.setTitle("Sound Details");
+   headerDetailsButton.setTooltip("Open or close the sound detail controls");
+   headerDetailsButton.onClick=detailsButton.onClick;
+   // A click received by the AU editor can take effect even if the host
+   // intercepts the corresponding mouse-up event.
+   detailsButton.setTriggeredOnMouseDown(true);
+   headerDetailsButton.setTriggeredOnMouseDown(true);
+   canvas.addAndMakeVisible(headerDetailsButton);
+  }
   resetButton.onClick=[this]{const float neutral[]={1,1,1,0,0,0,1,1,1,defaultMix,1,0};for(int n=0;n<12;++n){auto* p=processor.state.getParameter(ids[n+4]);p->beginChangeGesture();p->setValueNotifyingHost(p->convertTo0to1(neutral[n]));p->endChangeGesture();}};
   for(auto* button:{&smaller,&larger}) {
    button->setComponentID("textOnly");
@@ -329,6 +343,7 @@ private:
   const int xs[]={32,32,1300,1300},ys[]={178,371,178,371};for(int n=0;n<4;++n){detailLabels[n].setBounds(xs[n],ys[n],108,24);detailSliders[n].setBounds(xs[n],ys[n]+25,108,125);}
   for(int n=0;n<8;++n)buttons[n].setBounds(40+n*172,722,160,50);
   const int panelTop=detailsPanelTop();
+  headerDetailsButton.setBounds(610,81,220,31);
   detailsButton.setBounds(610,777,220,30);resetButton.setBounds(1170,panelTop+5,210,30);
   for(int n=4;n<12;++n){int x=72+(n-4)*164;detailLabels[n].setBounds(x,panelTop+34,140,22);detailSliders[n].setBounds(x+12,panelTop+60,116,108);}
  }
@@ -339,7 +354,10 @@ private:
   g.setGradientFill(juce::ColourGradient(look.accent.withAlpha(.065f),720,360,look.accent.withAlpha(0.f),720,80,true));g.fillEllipse(250,70,940,580);
   g.setColour(look.accent.withAlpha(.20f));g.fillRoundedRectangle(35,32,8,44,3);g.setColour(look.accent);g.fillRoundedRectangle(38,34,2,40,1);
   g.setColour(juce::Colour(0xffedf7f0));g.setFont(emotional::font(32,.025f));g.drawText("EMOTIONAL PARTICLE",60,28,410,40,juce::Justification::centredLeft);
-  g.setFont(emotional::font(16,.08f));g.setColour(look.accent.withAlpha(.90f));g.drawText("GRANULAR  /  MOOD ENGINE",61,73,380,20,juce::Justification::centredLeft);
+  g.setFont(emotional::font(16,.08f));g.setColour(look.accent.withAlpha(.90f));
+  const juce::String subtitle=usesInlineDetails()?"GRANULAR  /  AU " JucePlugin_VersionString
+                                                 :"GRANULAR  /  MOOD ENGINE";
+  g.drawText(subtitle,61,73,380,20,juce::Justification::centredLeft);
   g.setGradientFill(juce::ColourGradient(juce::Colours::white.withAlpha(.065f),505,35,look.accent.withAlpha(.025f),935,78,false));g.fillRoundedRectangle(505,35,430,43,18);g.setColour(look.accent.withAlpha(.25f));g.drawRoundedRectangle(505,35,430,43,18,.8f);
   g.setColour(juce::Colour(0xffe2f0e8));g.setFont(emotional::font(21,.025f));g.drawText(juce::String(granular::MoodPresetManager::presets[std::max(0,selected)].subtitle).toLowerCase(),550,35,340,43,juce::Justification::centred);
   g.setFont(emotional::font(16,.02f));g.setColour(look.accent.withAlpha(.7f));g.drawText("OUT",1030,42,40,18,juce::Justification::centredLeft);

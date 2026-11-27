@@ -29,11 +29,13 @@ bool checkInlineAuDetails(const juce::File& outDir) {
   if(canvas==nullptr)return fail("Missing editor canvas");
 
   juce::TextButton* details=nullptr;
+  juce::TextButton* shortcut=nullptr;
   juce::TextButton* reset=nullptr;
   juce::Slider* pitch=nullptr;
   for(auto* child:canvas->getChildren()) {
    if(auto* button=dynamic_cast<juce::TextButton*>(child)) {
-    if(button->getButtonText().startsWith("SOUND DETAILS"))details=button;
+    if(button->getTitle()=="Sound Details")details=button;
+    if(button->getTitle()=="Sound Details shortcut")shortcut=button;
     if(button->getButtonText()=="RESET DETAILS")reset=button;
    }
    if(auto* slider=dynamic_cast<juce::Slider*>(child);slider&&slider->getTitle()=="PITCH")
@@ -44,11 +46,12 @@ bool checkInlineAuDetails(const juce::File& outDir) {
    auto* hit=host.getComponentAt(centre);
    return hit==&control||control.isParentOf(hit);
   };
-  if(!details||!reset||!pitch||!hitTest(*details)||pitch->isVisible())
+  if(!details||!shortcut||!reset||!pitch||!hitTest(*details)||!hitTest(*shortcut)||pitch->isVisible())
    return fail("Toggle or initial hidden state invalid");
   host.editorBoundsChanges=0;
   details->onClick();
-  if(host.editorBoundsChanges!=0||editor->getBounds()!=host.getLocalBounds())
+  if(host.editorBoundsChanges!=0||editor->getBounds()!=host.getLocalBounds()
+     ||!details->getButtonText().endsWith("-")||!shortcut->getButtonText().endsWith("-"))
    return fail("Opening the panel resized the editor");
 
   int usableDetails=0;
@@ -79,7 +82,7 @@ bool checkInlineAuDetails(const juce::File& outDir) {
    if(!juce::PNGImageFormat().writeImageToStream(image,preview))return fail("Could not write preview");
   }
   if(!hitTest(*details))return fail("Panel toggle is covered while open");
-  details->onClick();
+  shortcut->onClick();
   if(host.editorBoundsChanges!=0||pitch->isVisible()||reset->isVisible())
    return fail("Closing the panel left visible controls or resized the editor");
  }
