@@ -15,13 +15,18 @@ bool checkInlineAuDetails(const juce::File& outDir) {
  juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Undefined);
 
  for(const float scale:{.5f,.75f,1.25f}) {
+  const auto fail=[scale](const char* reason) {
+   std::cerr<<"AU detail test at "<<juce::roundToInt(scale*100)<<"%: "<<reason<<'\n';
+   return false;
+  };
   processor.setEditorScale(scale);
   FixedViewport host;
   std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
   host.setSize(editor->getWidth(),editor->getHeight());
+  host.setVisible(true);
   host.addAndMakeVisible(*editor);
   auto* canvas=editor->getChildComponent(0);
-  if(canvas==nullptr)return false;
+  if(canvas==nullptr)return fail("Missing editor canvas");
 
   juce::TextButton* details=nullptr;
   juce::TextButton* reset=nullptr;
@@ -39,10 +44,12 @@ bool checkInlineAuDetails(const juce::File& outDir) {
    auto* hit=host.getComponentAt(centre);
    return hit==&control||control.isParentOf(hit);
   };
-  if(!details||!reset||!pitch||!hitTest(*details)||pitch->isVisible())return false;
+  if(!details||!reset||!pitch||!hitTest(*details)||pitch->isVisible())
+   return fail("Toggle or initial hidden state invalid");
   host.editorBoundsChanges=0;
   details->onClick();
-  if(host.editorBoundsChanges!=0||editor->getBounds()!=host.getLocalBounds())return false;
+  if(host.editorBoundsChanges!=0||editor->getBounds()!=host.getLocalBounds())
+   return fail("Opening the panel resized the editor");
 
   int usableDetails=0;
   for(auto* child:canvas->getChildren()) {
@@ -53,25 +60,28 @@ bool checkInlineAuDetails(const juce::File& outDir) {
     continue;
    if(!host.getLocalBounds().contains(host.getLocalArea(slider,slider->getLocalBounds()))
       ||!hitTest(*slider))
-    return false;
+    return fail("A detail control is clipped or covered");
    ++usableDetails;
   }
-  if(usableDetails!=8||!hitTest(*reset))return false;
+  if(usableDetails!=8||!hitTest(*reset))return fail("Detail controls or reset button missing");
   pitch->setValue(5,juce::sendNotificationSync);
-  if(std::abs(processor.state.getRawParameterValue("pitch")->load()-5)>.001f)return false;
+  if(std::abs(processor.state.getRawParameterValue("pitch")->load()-5)>.001f)
+   return fail("Pitch control did not update the processor");
   reset->onClick();
-  if(std::abs(processor.state.getRawParameterValue("pitch")->load())>.001f)return false;
+  if(std::abs(processor.state.getRawParameterValue("pitch")->load())>.001f)
+   return fail("Reset Details did not reset pitch");
 
   if(scale==.75f) {
    auto image=editor->createComponentSnapshot(editor->getLocalBounds());
    juce::FileOutputStream preview(outDir.getChildFile("preview-au-details.png"));
-   if(!preview.openedOk())return false;
+   if(!preview.openedOk())return fail("Could not open preview output");
    preview.setPosition(0);preview.truncate();
-   if(!juce::PNGImageFormat().writeImageToStream(image,preview))return false;
+   if(!juce::PNGImageFormat().writeImageToStream(image,preview))return fail("Could not write preview");
   }
-  if(!hitTest(*details))return false;
+  if(!hitTest(*details))return fail("Panel toggle is covered while open");
   details->onClick();
-  if(host.editorBoundsChanges!=0||pitch->isVisible()||reset->isVisible())return false;
+  if(host.editorBoundsChanges!=0||pitch->isVisible()||reset->isVisible())
+   return fail("Closing the panel left visible controls or resized the editor");
  }
  return true;
 }
